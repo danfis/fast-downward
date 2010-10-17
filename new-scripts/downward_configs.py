@@ -13,6 +13,7 @@ import downward_suites
 HELP = """\
 Configurations can be specified in the following ways: \
 ou, astar_searches, myconfigfile:yY, myconfigfile:lama_configs
+The python modules have to live in the scripts dir.
 """
 
 # Eager A* search with landmark-cut heuristic (previously configuration ou)

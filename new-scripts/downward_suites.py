@@ -6,6 +6,7 @@ import tools
 HELP = """\
 tasks, domains and suites can be specified in the following ways: gripper, gripper:prob01.pddl, \
 TEST, mysuitefile.py:myTEST, TEST_FIRST5, mysuitefile.py:myTEST_FIRST5
+The python modules have to live in the scripts dir.
 """
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -96,7 +97,7 @@ def generate_problems(description):
         description = rest
     else:
         filename = __file__
-        
+    
     module = tools.import_python_file(filename)
     module_dict = module.__dict__
         
