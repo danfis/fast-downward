@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <ilcplex/cplex.h>
-#include <boruvka/alloc.h>
 
 #include "common.h"
 #include "fa.h"
@@ -124,7 +123,7 @@ PyObject *mutexFA(PyObject *self, PyObject *args, PyObject *kwds)
     //CPXwriteprob(env, lp, "out.lp", "LP");
 
     out = PyList_New(0);
-    sol = BOR_ALLOC_ARR(double, task.fact_size);
+    sol = (double *)malloc(sizeof(double) * task.fact_size);
     row = 1 + task.action_size;
     while ((objval = lpSolve(env, lp, sol)) > 1.5){
         // Remove current mutex from future solutions
@@ -151,7 +150,7 @@ PyObject *mutexFA(PyObject *self, PyObject *args, PyObject *kwds)
         Py_DECREF(list);
     }
 
-    BOR_FREE(sol);
+    free(sol);
     CPXfreeprob(env, &lp);
     CPXcloseCPLEX(&env);
     taskFree(&task);

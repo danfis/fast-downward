@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <ilcplex/cplex.h>
-#include <boruvka/alloc.h>
 
 #include "common.h"
 #include "h2.h"
@@ -94,7 +93,7 @@ PyObject *mutexH2(PyObject *self, PyObject *args, PyObject *kwds)
     if (taskInit(&task, args) != 0)
         return NULL;
 
-    fact = BOR_CALLOC_ARR(int, task.fact_size * task.fact_size);
+    fact = (int *)calloc(task.fact_size * task.fact_size, sizeof(int));
 
     for (i = 0; i < task.init_state_size; ++i){
         for (j = i; j < task.init_state_size; ++j){
@@ -134,7 +133,7 @@ PyObject *mutexH2(PyObject *self, PyObject *args, PyObject *kwds)
         }
     }
 
-    BOR_FREE(fact);
+    free(fact);
     taskFree(&task);
     return out;
 }

@@ -1,5 +1,3 @@
-#include <boruvka/alloc.h>
-
 #include "common.h"
 
 static int parseIntArr(PyObject *list, int **arr, int *arr_size)
@@ -13,7 +11,7 @@ static int parseIntArr(PyObject *list, int **arr, int *arr_size)
         return 0;
     }
 
-    *arr = BOR_ALLOC_ARR(int, *arr_size);
+    *arr = (int *)malloc(sizeof(int) * *arr_size);
 
     iter = PyObject_GetIter(list);
     for (i = 0; (item = PyIter_Next(iter)) != NULL; ++i){
@@ -64,7 +62,7 @@ static int _taskInitActions(task_t *task, PyObject *pyactions)
     PyObject *iter, *item;
 
     size = PyObject_Size(pyactions);
-    task->action = BOR_CALLOC_ARR(task_action_t, size);
+    task->action = (task_action_t *)calloc(size, sizeof(task_action_t));
     task->action_size = 0;
 
     iter = PyObject_GetIter(pyactions);
@@ -104,14 +102,14 @@ void taskFree(task_t *task)
 {
     int i;
 
-    BOR_FREE(task->fact);
-    BOR_FREE(task->init_state);
+    free(task->fact);
+    free(task->init_state);
 
     for (i = 0; i < task->action_size; ++i){
-        BOR_FREE(task->action[i].name);
-        BOR_FREE(task->action[i].pre);
-        BOR_FREE(task->action[i].add);
-        BOR_FREE(task->action[i].del);
+        free(task->action[i].name);
+        free(task->action[i].pre);
+        free(task->action[i].add);
+        free(task->action[i].del);
     }
-    BOR_FREE(task->action);
+    free(task->action);
 }

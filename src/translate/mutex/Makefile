@@ -6,10 +6,8 @@ CPLEX_LDFLAGS = -L/opt/cplex-1263/cplex/bin/x86-64_linux -lcplex1263 -Wl,-rpath,
 
 CFLAGS += -fPIC
 CFLAGS += -I.
-CFLAGS += -Iboruvka
 CFLAGS += $(PYTHON_CFLAGS)
 CFLAGS += $(CPLEX_CFLAGS)
-LDFLAGS += -Lboruvka -lboruvka
 LDFLAGS += $(PYTHON_LDFLAGS)
 LDFLAGS += $(CPLEX_LDFLAGS)
 
