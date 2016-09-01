@@ -85,24 +85,26 @@ def get_initial_invariants(task):
             yield invariants.Invariant((part,))
 
 def find_invariants(task, reachable_action_params):
-    limit = options.invariant_generation_max_candidates
-    candidates = deque(itertools.islice(get_initial_invariants(task), 0, limit))
+    #limit = options.invariant_generation_max_candidates
+    #candidates = deque(itertools.islice(get_initial_invariants(task), 0, limit))
+    candidates = deque(get_initial_invariants(task))
     print(len(candidates), "initial candidates")
     seen_candidates = set(candidates)
 
     balance_checker = BalanceChecker(task, reachable_action_params)
 
     def enqueue_func(invariant):
-        if len(seen_candidates) < limit and invariant not in seen_candidates:
+        #if len(seen_candidates) < limit and invariant not in seen_candidates:
+        if invariant not in seen_candidates:
             candidates.append(invariant)
             seen_candidates.add(invariant)
 
     start_time = time.clock()
     while candidates:
         candidate = candidates.popleft()
-        if time.clock() - start_time > options.invariant_generation_max_time:
-            print("Time limit reached, aborting invariant generation")
-            return
+#        if time.clock() - start_time > options.invariant_generation_max_time:
+#            print("Time limit reached, aborting invariant generation")
+#            return
         if candidate.check_balance(balance_checker, enqueue_func):
             yield candidate
 

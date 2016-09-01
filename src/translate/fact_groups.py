@@ -4,6 +4,7 @@ import invariant_finder
 import options
 import pddl
 import timers
+import sys
 
 
 DEBUG = False
@@ -106,11 +107,96 @@ def collect_all_mutex_groups(groups, atoms):
 def sort_groups(groups):
     return sorted(sorted(group) for group in groups)
 
-def compute_groups(task, atoms, reachable_action_params):
-    groups = invariant_finder.get_groups(task, reachable_action_params)
+def compute_groups(task, atoms, reachable_action_params, actions):
+    import mutex
+    import time
 
-    with timers.timing("Instantiating groups"):
-        groups = instantiate_groups(groups, task, atoms)
+    t = time.time()
+    groups = set()
+    for mtype in options.mutex.split('+'):
+        if mtype == 'fd':
+            g = invariant_finder.get_groups(task, reachable_action_params)
+            with timers.timing("Instantiating groups"):
+                g = instantiate_groups(g, task, atoms)
+            g = set([frozenset(set(x) & set(atoms)) for x in g])
+
+        elif mtype == 'h2':
+            g, _ = mutex.h2(task, atoms, actions)
+
+        elif mtype == 'ch2':
+            g, _ = mutex.ch2(task, atoms, actions)
+
+        elif mtype == 'fa':
+            g, _ = mutex.fa(task, atoms, actions)
+
+        elif mtype == 'fa-fd':
+            g = invariant_finder.get_groups(task, reachable_action_params)
+            with timers.timing("Instantiating groups"):
+                g = instantiate_groups(g, task, atoms)
+            g = set([frozenset(set(x) & set(atoms)) for x in g])
+
+            g, _ = mutex.fa(task, atoms, actions, init_mutexes = g)
+
+        elif mtype == 'cfa':
+            g, _ = mutex.cfa(task, atoms, actions)
+
+        elif mtype == 'rfa':
+            g, _ = mutex.rfa(task, atoms, actions)
+
+        elif mtype == 'rfa-ilp':
+            g, _ = mutex.fa(task, atoms, actions, rfa = True)
+
+        elif mtype == 'rfa-ilp-c':
+            g, _ = mutex.rfa_complete(task, atoms, actions)
+
+        elif mtype == 'extend':
+            g, _ = mutex.extend_mutexes(groups, task, atoms, actions)
+
+        elif mtype == 'full':
+            g, _ = mutex.full(task, atoms, actions, True, -1,
+                              options.mutex_max_time, options.mutex_max_mem)
+
+        elif mtype.startswith('full'):
+            size = int(mtype[4:])
+            g, _ = mutex.full(task, atoms, actions, True, size,
+                              options.mutex_max_time, options.mutex_max_mem)
+
+        else:
+            raise Exception('Uknown mutex algorithm: ' + mtype)
+
+        g = set([x for x in g if len(x) > 1])
+        groups |= g
+
+    if options.mutex_max and len(groups) > 0:
+        g = set()
+        for m in mutex.max_mutexes(groups):
+            g.add(m)
+            if options.mutex_max_time > 0. \
+               and time.time() - t >= options.mutex_max_time:
+                print('Error: time limit exceeded!')
+                sys.exit(-1)
+        groups = g
+    mutexes = groups
+    t = time.time() - t
+    print('MUTEX TIME:', t)
+
+    if options.mutex_print:
+        for m in groups:
+            print('MUTEX:', ';'.join(sorted([str(x) for x in m])))
+        for m in mutex.pair_mutexes(groups):
+            print('MUTEX2:', ';'.join(sorted([str(x) for x in m])))
+
+    if options.mutex_print_max:
+        t2 = time.time()
+        for m in mutex.max_mutexes(groups):
+            print('MUTEX-MAX:', ';'.join(sorted([str(x) for x in m])))
+        t2 = time.time() - t2
+        print('MUTEX MAX TIME:', t2)
+
+    if options.mutex_check >= 0:
+        check, _ = mutex.full(task, atoms, actions, True, options.mutex_check)
+        if check is not None:
+            mutex.check_mutexes(check, groups)
 
     # Sort here already to get deterministic mutex groups.
     groups = sort_groups(groups)
@@ -130,4 +216,4 @@ def compute_groups(task, atoms, reachable_action_params):
             if len(group) >= 2:
                 print("{%s}" % ", ".join(map(str, group)))
 
-    return groups, mutex_groups, translation_key
+    return groups, mutex_groups, translation_key, mutexes

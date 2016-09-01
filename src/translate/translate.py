@@ -28,6 +28,7 @@ import sas_tasks
 import simplify
 import timers
 import tools
+import time
 
 # TODO: The translator may generate trivial derived variables which are always
 # true, for example if there ia a derived predicate in the input that only
@@ -511,6 +512,81 @@ def unsolvable_sas_task(msg):
     print("%s! Generating unsolvable task..." % msg)
     return trivial_task(solvable=False)
 
+
+def action_violate_mutex(action, mutex):
+    if len(set(action.precondition) & mutex) > 1:
+        return True
+    return False
+
+def action_violate_any_mutex(action, mutexes):
+    for mutex in mutexes:
+        if action_violate_mutex(action, mutex):
+            return True
+    return False
+
+def action_violate_goal_mutex(action, mutex):
+    deleff = set([x[1] for x in action.del_effects])
+    deleff = deleff & set(action.precondition)
+    addeff = set([x[1] for x in action.add_effects])
+    if len(deleff & mutex) > len(addeff & mutex):
+        return True
+    return False
+
+
+def action_violate_any_goal_mutex(action, mutexes):
+    for mutex in mutexes:
+        if action_violate_goal_mutex(action, mutex):
+            return True
+    return False
+
+def filter_actions(actions, mutexes, task):
+    original_num = len(actions)
+    goal = set(task.goal.parts)
+    actions = [x for x in actions if not action_violate_any_mutex(x, mutexes)]
+    if options.mutex_prune_de:
+        goal_mutexes = [x for x in mutexes if len(goal & x) > 0 and len(set(task.init) & x) > 0]
+        orig2 = len(actions)
+        actions = [x for x in actions if not action_violate_any_goal_mutex(x, goal_mutexes)]
+        print('Removed dead-end actions:', orig2 - len(actions))
+    return actions, original_num - len(actions)
+
+
+def unnecessary_facts_dfs(fr, graph, mark):
+    queue = [fr]
+    while len(queue) > 0:
+        cur = queue.pop()
+        if mark[cur]:
+            continue
+        mark[cur] = True
+        for x in graph[cur]:
+            if not mark[x]:
+                queue.append(x)
+
+def unnecessary_facts(task, atoms, actions):
+    graph = { x : set() for x in atoms }
+    for a in actions:
+        for e in a.add_effects + a.del_effects:
+            fr = e[1]
+            for to in a.precondition:
+                if to.negated:
+                    to = to.negate()
+                graph[fr].add(to)
+    mark = { x : False for x in atoms }
+    for x in task.goal.parts:
+        unnecessary_facts_dfs(x, graph, mark)
+
+    return frozenset([x for x, k in mark.iteritems() if not k])
+
+def remove_unnecessary_facts(task, atoms, actions, unnecessary):
+    atoms -= unnecessary
+    for a in actions:
+        a.precondition = [x for x in a.precondition if x not in unnecessary]
+        a.precondition = [x for x in a.precondition if x.negate() not in unnecessary]
+        a.add_effects = [x for x in a.add_effects if x[1] not in unnecessary]
+        a.del_effects = [x for x in a.del_effects if x[1] not in unnecessary]
+    task.init = [x for x in task.init if x not in unnecessary]
+    return task, atoms, actions
+
 def pddl_to_sas(task):
     with timers.timing("Instantiating", block=True):
         (relaxed_reachable, atoms, actions, axioms,
@@ -527,9 +603,45 @@ def pddl_to_sas(task):
     for item in goal_list:
         assert isinstance(item, pddl.Literal)
 
+    print('Number of facts before pruning:', len(atoms))
+    print('Number of actions before pruning:', len(actions))
     with timers.timing("Computing fact groups", block=True):
-        groups, mutex_groups, translation_key = fact_groups.compute_groups(
-            task, atoms, reachable_action_params)
+        from pprint import pprint
+#        pprint(task.goal.parts)
+#        rm_facts = unnecessary_facts(task, atoms, actions)
+#        print('Uncessary:', len(rm_facts))
+#        pprint(rm_facts)
+
+        groups, mutex_groups, translation_key, mutexes = fact_groups.compute_groups(
+            task, atoms, reachable_action_params, actions)
+
+        if options.mutex_prune:
+            rm_facts = unnecessary_facts(task, atoms, actions)
+            print('Removed facts:', len(rm_facts))
+#        pprint(rm_facts)
+            task, atoms, actions = remove_unnecessary_facts(task, atoms, actions, rm_facts)
+        #pprint(mutexes)
+        #pprint(groups)
+            print('Mutex lens:', [len(x) for x in mutexes])
+            actions, removed = filter_actions(actions, mutexes, task)
+            print('Removed actions:', removed, 'remain:', len(actions))
+            while removed > 0 or len(rm_facts) > 0:
+                groups, mutex_groups, translation_key, mutexes = fact_groups.compute_groups(
+                    task, atoms, reachable_action_params, actions)
+                #pprint(mutexes)
+                #pprint(groups)
+                actions, removed = filter_actions(actions, mutexes, task)
+                print('Removed actions:', removed, 'remain:', len(actions))
+                print('Mutex lens:', [len(x) for x in mutexes])
+                rm_facts = unnecessary_facts(task, atoms, actions)
+                print('Removed facts:', len(rm_facts))
+                pprint(rm_facts)
+                task, atoms, actions = remove_unnecessary_facts(task, atoms, actions, rm_facts)
+    t2 = time.time()
+#    print('Atoms:')
+#    pprint(atoms)
+    print('Number of facts after pruning:', len(atoms))
+    print('Number of actions after pruning:', len(actions))
 
     with timers.timing("Building STRIPS to SAS dictionary"):
         ranges, strips_to_sas = strips_to_sas_dictionary(
@@ -677,7 +789,6 @@ def main():
         with open("output.sas", "w") as output_file:
             sas_task.output(output_file)
     print("Done! %s" % timer)
-
 
 if __name__ == "__main__":
     main()

@@ -89,6 +89,15 @@ class Action(object):
         for eff in self.effects:
             eff.instantiate(var_mapping, init_facts, fluent_facts,
                             objects_by_type, effects)
+
+        # Make the action well-formed
+        del_eff = [x for x in effects if x[1].negated]
+        add_eff = [x for x in effects if not x[1].negated]
+
+        del_eff = [x for x in del_eff if (x[0], x[1].negate()) not in add_eff]
+        add_eff = [x for x in add_eff if x[1] not in precondition]
+        effects = del_eff + add_eff
+
         if effects:
             if metric:
                 if self.cost is None:

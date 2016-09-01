@@ -42,6 +42,42 @@ def parse_args():
     argparser.add_argument(
         "--dump-task", action="store_true",
         help="dump human-readable SAS+ representation of the task")
+    argparser.add_argument(
+        "--mutex", default = 'fd',
+        dest="mutex", action="store"
+    )
+    argparser.add_argument(
+        "--mutex-max",
+        dest="mutex_max", action="store_true"
+    )
+    argparser.add_argument(
+        "--mutex-check",
+        dest="mutex_check", action="store", type=int, default=-1
+    )
+    argparser.add_argument(
+        "--mutex-max-time",
+        dest="mutex_max_time", action="store", type=float, default=-1
+    )
+    argparser.add_argument(
+        "--mutex-max-mem",
+        dest="mutex_max_mem", action="store", type=float, default=-1
+    )
+    argparser.add_argument(
+        "--mutex-print",
+        dest="mutex_print", action="store_true"
+    )
+    argparser.add_argument(
+        "--mutex-print-max",
+        dest="mutex_print_max", action="store_true"
+    )
+    argparser.add_argument(
+        "--mutex-prune",
+        dest="mutex_prune", action="store_true"
+    )
+    argparser.add_argument(
+        "--mutex-prune-de",
+        dest="mutex_prune_de", action="store_true"
+    )
     return argparser.parse_args()
 
 

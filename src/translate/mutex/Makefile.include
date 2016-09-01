@@ -1,0 +1,38 @@
+BASEPATH_ := $(dir $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST)))
+
+CC ?= gcc
+PYTHON2 ?= python2
+
+SYSTEM = $(shell uname)
+
+SYSTEM_LDFLAGS =
+
+DEBUG ?= no
+PROFIL ?= no
+WERROR ?= no
+
+ifeq '$(PROFIL)' 'yes'
+  DEBUG = yes
+endif
+
+ifeq '$(DEBUG)' 'yes'
+  CFLAGS = -g -Wno-unused-function
+else
+  # force to use optimizations
+  CFLAGS += -O3
+endif
+ifeq '$(PROFIL)' 'yes'
+  CFLAGS += -pg
+endif
+CFLAGS += -Wall -pedantic --std=gnu99
+
+ifeq '$(WERROR)' 'yes'
+  CFLAGS += -Werror
+endif
+
+LDFLAGS += $(SYSTEM_LDFLAGS)
+
+PYTHON_CFLAGS ?= $(shell pkg-config --cflags python-2.7)
+PYTHON_LDFLAGS ?= $(shell pkg-config --libs python-2.7)
+
+.DEFAULT_GOAL := all
