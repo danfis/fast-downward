@@ -1,8 +1,8 @@
 -include Makefile.local
 -include Makefile.include
 
-CPLEX_CFLAGS = -I/opt/cplex-1263/cplex/include
-CPLEX_LDFLAGS = -L/opt/cplex-1263/cplex/bin/x86-64_linux -lcplex1263 -Wl,-rpath,/opt/cplex-1263/cplex/bin/x86-64_linux
+CPLEX_CFLAGS ?= -I/opt/cplex-1263/cplex/include
+CPLEX_LDFLAGS ?= -L/opt/cplex-1263/cplex/bin/x86-64_linux -lcplex1263 -Wl,-rpath,/opt/cplex-1263/cplex/bin/x86-64_linux
 
 CFLAGS += -fPIC
 CFLAGS += -I.

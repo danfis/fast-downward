@@ -230,6 +230,7 @@ static PyTypeObject SocketType = {
 static PyMethodDef methods[] = {
     {"fa", (PyCFunction)mutexFA, METH_VARARGS, "fact-alternating mutexes" },
     {"h2", (PyCFunction)mutexH2, METH_VARARGS, "h^2 mutexes" },
+    { NULL, NULL, 0, NULL },
 };
 
 
