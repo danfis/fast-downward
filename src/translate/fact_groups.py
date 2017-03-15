@@ -171,10 +171,6 @@ def compute_groups(task, atoms, reachable_action_params, actions):
         g = set()
         for m in mutex.max_mutexes(groups):
             g.add(m)
-            if options.mutex_max_time > 0. \
-               and time.time() - t >= options.mutex_max_time:
-                print('Error: time limit exceeded!')
-                sys.exit(-1)
         groups = g
     mutexes = groups
     t = time.time() - t

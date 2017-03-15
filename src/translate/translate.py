@@ -29,6 +29,7 @@ import simplify
 import timers
 import tools
 import time
+import threading
 
 # TODO: The translator may generate trivial derived variables which are always
 # true, for example if there ia a derived predicate in the input that only
@@ -587,6 +588,17 @@ def remove_unnecessary_facts(task, atoms, actions, unnecessary):
     task.init = [x for x in task.init if x not in unnecessary]
     return task, atoms, actions
 
+def create_max_time_timer(max_time):
+    def max_time_th():
+        print('')
+        print('Error: time limit exceeded!')
+        import os
+        import signal
+        os.kill(os.getpid(), signal.SIGKILL)
+    t = threading.Timer(max_time, max_time_th)
+    t.start()
+    return t
+
 def pddl_to_sas(task):
     with timers.timing("Instantiating", block=True):
         (relaxed_reachable, atoms, actions, axioms,
@@ -611,6 +623,9 @@ def pddl_to_sas(task):
 #        rm_facts = unnecessary_facts(task, atoms, actions)
 #        print('Uncessary:', len(rm_facts))
 #        pprint(rm_facts)
+        max_time_timer = None
+        if options.mutex_max_time > 0.:
+            max_time_timer = create_max_time_timer(options.mutex_max_time)
 
         groups, mutex_groups, translation_key, mutexes = fact_groups.compute_groups(
             task, atoms, reachable_action_params, actions)
@@ -637,6 +652,9 @@ def pddl_to_sas(task):
                 print('Removed facts:', len(rm_facts))
                 pprint(rm_facts)
                 task, atoms, actions = remove_unnecessary_facts(task, atoms, actions, rm_facts)
+
+        if max_time_timer is not None:
+            max_time_timer.cancel()
     t2 = time.time()
 #    print('Atoms:')
 #    pprint(atoms)
