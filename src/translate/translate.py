@@ -593,8 +593,7 @@ def create_max_time_timer(max_time):
         print('')
         print('Error: time limit exceeded!')
         import os
-        import signal
-        os.kill(os.getpid(), signal.SIGKILL)
+        os._exit(-1)
     t = threading.Timer(max_time, max_time_th)
     t.start()
     return t
